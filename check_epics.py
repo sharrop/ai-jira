@@ -30,8 +30,17 @@ async def main():
     components = client.get_project_components("AP")
     component_names = [comp.get('name') for comp in components if comp.get('name')]
     print(f"   Found {len(component_names)} Components in AP project:")
-    for name in component_names:
-        print(f"    - {name}")
+    for component in components[:30]:    # limit to first 30 for brevity
+        name = component.get('name')
+        lead = component.get('lead', {}).get('displayName', 'No lead')
+        if lead != "No lead":
+            active = component.get('lead', {}).get('active', False) if lead != "No lead" else False
+            display_name = component.get('lead', {}).get('displayName', 'No lead')
+        else:
+            active = False
+            display_name = "No lead"
+        # Print display name padded to 40 characters
+        print(f"   - {name:40} {display_name} {'(inactive)' if not active else ''}")
 
     # Get EPICs
     # JQL to find issues in AP project created in last month
