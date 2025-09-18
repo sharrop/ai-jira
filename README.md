@@ -6,22 +6,39 @@ A comprehensive Python framework for validating and monitoring JIRA issue data q
 
 This system provides automated data quality checks for JIRA projects, focusing on the AP (Applications Portfolio) project. It uses a sophisticated rule engine to validate assignments, metadata, workflow states, and business processes across all JIRA issue types including Stories, Tasks, Bugs, EPICs, and Sub-tasks.
 
+## Recent Enhancements
+
+### New Rules Added
+- **CommentCountInfoRule**: Track community engagement by showing comment counts for each issue
+- **ToolingTransferRule**: Identify issues labeled or categorized as "Tooling" that should be transferred to Git-based issue tracking
+
+### System Improvements
+- **Dynamic Issue Type Support**: All rules now dynamically adapt messaging based on actual issue type (Task, Bug, Epic, etc.) instead of hardcoded "EPIC" references
+- **Enhanced Component Detection**: Fixed JIRA API field name issues for proper component retrieval
+- **Better Unicode Support**: Improved Windows CP1252 encoding compatibility for file output redirection
+- **Comprehensive Rule Coverage**: Now 18+ active validation rules across 5 categories
+
 ## Features
 
 ### Core Capabilities
 - **Multi-Issue Type Support**: Validates Stories, Tasks, Bugs, EPICs, and Sub-tasks
-- **Modular Rule Architecture**: Extensible rule system with 11 pre-built validation rules
+- **Modular Rule Architecture**: Extensible rule system with 18+ pre-built validation rules
 - **Configurable Severity Levels**: INFO, WARNING, ERROR, and CRITICAL classifications
 - **Adaptive Thresholds**: Issue-type-aware validation with appropriate timeframes
 - **Comprehensive Reporting**: Detailed summaries with severity-based categorization
+- **Dynamic Issue Type Detection**: Rules automatically adapt to different JIRA issue types
+- **Comment Tracking**: Monitor community engagement through comment count reporting
+- **Tooling Detection**: Identify tooling-related issues for potential Git migration
 - **JQL Security**: Input validation and parameterization for secure JIRA queries
 
 ### Rule Categories
-1. **Assignment Rules**: Validate user assignments and assignee status
-2. **Metadata Rules**: Check components, fix versions, and descriptions  
-3. **Workflow Rules**: Monitor issue lifecycle and timing
-4. **Business Rules**: Enforce priority management and planning standards
-5. **TMF API Rules**: Validate TMF API references and version currency
+1. **Assignment Rules**: Validate user assignments and assignee status (2 rules)
+2. **Metadata Rules**: Check components, fix versions, descriptions, and info display (6 rules)  
+3. **Workflow Rules**: Monitor issue lifecycle and timing (4 rules)
+4. **Business Rules**: Enforce priority management, planning standards, and tooling detection (4 rules)
+5. **TMF API Rules**: Validate TMF API references and version currency (2 rules)
+
+**Total: 18+ active validation rules** providing comprehensive quality assurance across all JIRA issue types.
 
 ### TMF API Integration
 - **Automatic API Detection**: Identifies TMF API references in issue titles and descriptions
@@ -117,24 +134,48 @@ python check_epics.py
 
 ### Output Examples
 
+**Enhanced Multi-Issue Type Reports:**
 ```
-🔍 JIRA Data Quality Report for Stories (50 issues checked)
+🔍 JIRA Data Quality Report for Tasks (43 issues checked)
 ════════════════════════════════════════════════════════
 
 📊 SUMMARY:
-   Total Issues: 50
-   ✅ Passed: 32 (64%)
-   ⚠️  Issues Found: 18 (36%)
+   Total Issues: 43
+   ✅ Passed: 28 (65%)
+   ⚠️  Issues Found: 15 (35%)
    
-🚨 CRITICAL: 2 issues
-🔴 ERROR: 5 issues  
+🚨 CRITICAL: 1 issues
+🔴 ERROR: 3 issues  
 🟡 WARNING: 8 issues
 ℹ️  INFO: 3 issues
 
 🔍 RULE RESULTS:
-UnassignedIssueRule: 5 violations (🔴 ERROR)
-MissingComponentsRule: 8 violations (🟡 WARNING)
-HighPriorityStaleRule: 2 violations (🚨 CRITICAL)
+UnassignedIssueRule: 3 violations (🔴 ERROR)
+MissingComponentsRule: 5 violations (🟡 WARNING)
+ToolingTransferRule: 6 violations (🟡 WARNING)
+CommentCountInfoRule: 43 info results (ℹ️ INFO)
+```
+
+**New Rule Examples:**
+
+*Comment Count Tracking:*
+```
+[PASS] No comments
+[PASS] Has 1 comment  
+[PASS] Has 3 comments
+```
+
+*Tooling Detection:*
+```
+[WARNING] TASK [AP-6536] has 'Tooling' component and should be transferred to Git
+  [SUGGESTION] Consider transferring this task to a Git repository issue tracker and closing it in JIRA. Tooling-related work is better managed in Git where code changes are tracked.
+```
+
+*Dynamic Issue Type Support:*
+```
+[WARNING] TASK [AP-7080] is in progress but not assigned to anyone
+[WARNING] BUG [AP-6114] has 'Tooling' component and should be transferred to Git  
+[ERROR] SUB-TASK [AP-6544] has no parent issue
 ```
 
 ### TMF API Features
@@ -212,14 +253,16 @@ Adjust validation thresholds for your team's needs:
 ## Available Rules
 
 ### Assignment Rules
-- **UnassignedEpicRule**: Identifies unassigned issues
+- **UnassignedEpicRule**: Identifies unassigned issues across all issue types
 - **InactiveAssigneeRule**: Flags issues assigned to inactive users
 
 ### Metadata Rules
-- **MissingComponentsRule**: Ensures issues have TMF components
+- **MissingComponentsRule**: Ensures issues have appropriate TMF components
 - **MissingFixVersionRule**: Validates fix version assignment
-- **LegacyFixVersionRule**: Identifies outdated fix versions
+- **LegacyFixVersionRule**: Identifies outdated fix versions (< 5.0)
 - **MissingDescriptionRule**: Checks for adequate descriptions
+- **LabelsInfoRule**: Displays assigned labels for visibility (INFO level)
+- **CommentCountInfoRule**: Shows comment counts to track community engagement (INFO level)
 
 ### Workflow Rules
 - **StaleEpicRule**: Finds issues without recent updates
@@ -231,6 +274,7 @@ Adjust validation thresholds for your team's needs:
 - **MissingPriorityRule**: Issues without priority assignment
 - **InProgressTooLongRule**: In-progress issues exceeding timeframes
 - **SubTaskOrphanRule**: Sub-tasks without valid parent relationships
+- **ToolingTransferRule**: Identifies tooling-related issues (by label or component) for potential Git migration
 
 ### TMF API Rules
 - **TmfApiReferenceRule**: Provides TMF API information for referenced APIs
@@ -336,6 +380,11 @@ The system can be integrated into:
    - Disable unnecessary rules
    - Use more specific JQL filters
 
+4. **Tooling migration suggestions**
+   - The ToolingTransferRule identifies issues that may benefit from Git repository migration
+   - Suggestions appear for issues with "Tooling" labels or components
+   - Consider these recommendations for workflow modernization and development efficiency
+
 ### Debug Mode
 
 Enable detailed logging by modifying the checker scripts:
@@ -343,6 +392,18 @@ Enable detailed logging by modifying the checker scripts:
 import logging
 logging.basicConfig(level=logging.DEBUG)
 ```
+
+### Interpreting New Rule Outputs
+
+**Comment Count Information (INFO level)**:
+- Shows the number of comments on each issue
+- Helps identify issues that may need attention or have active discussions
+- No action required - informational only
+
+**Tooling Migration Suggestions (WARNING level)**:
+- Identifies issues marked with "Tooling" labels or components
+- Suggests considering Git repository migration for development efficiency
+- Review these issues for potential workflow modernization opportunities
 
 ## License
 

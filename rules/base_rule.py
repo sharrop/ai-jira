@@ -45,21 +45,21 @@ class RuleResult:
         self.timestamp = datetime.now()
     
     def __str__(self):
-        status = "✅" if self.passed else self._get_severity_icon()
+        status = "[PASS]" if self.passed else self._get_severity_icon()
         base = f"{status} {self.message}"
         if self.suggestion and not self.passed:
-            base += f"\n      💡 Suggestion: {self.suggestion}"
+            base += f"\n      [SUGGESTION] {self.suggestion}"
         return base
     
     def _get_severity_icon(self) -> str:
         """Get icon for severity level"""
         icons = {
-            RuleSeverity.INFO: "ℹ️",
-            RuleSeverity.WARNING: "⚠️",
-            RuleSeverity.ERROR: "❌",
-            RuleSeverity.CRITICAL: "🚨"
+            RuleSeverity.INFO: "[INFO]",
+            RuleSeverity.WARNING: "[WARNING]",
+            RuleSeverity.ERROR: "[ERROR]",
+            RuleSeverity.CRITICAL: "[CRITICAL]"
         }
-        return icons.get(self.severity, "❓")
+        return icons.get(self.severity, "[UNKNOWN]")
 
 
 class BaseRule(ABC):

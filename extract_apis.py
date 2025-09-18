@@ -20,9 +20,6 @@ def extract_api_info(html_content):
         # Clean up API names by removing extra whitespace and newlines
         cleaned_name = re.sub(r'\s+', ' ', api_name.strip())
         
-        # Create full URL
-        full_url = f"https://www.tmforum.org{href}"
-        
         # Find the section containing this API name to extract TMF code and versions
         # Escape special regex characters in the API name for pattern matching
         escaped_name = re.escape(api_name)
@@ -38,9 +35,36 @@ def extract_api_info(html_content):
             tmf_code = tmf_match.group(1) if tmf_match else 'Unknown'
             
             # Extract versions
-            version_pattern = r'<span>(v\d+)</span>'
+            version_pattern = r'<span>(v\d+(?:\.\d+)*)</span>'
             versions = re.findall(version_pattern, api_section)
-            versions_str = '; '.join(sorted(versions)) if versions else 'Unknown'
+            
+            if versions:
+                # Sort versions to find the highest one
+                # Convert versions to tuples of integers for proper sorting
+                def version_key(v):
+                    # Remove 'v' prefix and split by '.'
+                    parts = v[1:].split('.')
+                    # Convert to integers, padding with 0s if needed
+                    return tuple(int(part) for part in parts) + (0,) * (3 - len(parts))
+                
+                sorted_versions = sorted(versions, key=version_key)
+                highest_version = sorted_versions[-1]
+                versions_str = '; '.join(sorted(versions, key=version_key))
+                
+                # Construct URL with the highest version
+                # Extract base path from href and replace version
+                base_url_pattern = r'(/oda/open-apis/directory/[^/]+)/v[\d.]+$'
+                base_match = re.search(base_url_pattern, href)
+                if base_match:
+                    base_path = base_match.group(1)
+                    # Create URL with highest version
+                    full_url = f"https://www.tmforum.org{base_path}/{highest_version}"
+                else:
+                    # Fallback to original href if pattern doesn't match
+                    full_url = f"https://www.tmforum.org{href}"
+            else:
+                versions_str = 'Unknown'
+                full_url = f"https://www.tmforum.org{href}"
             
             apis.append({
                 'long_name': cleaned_name,

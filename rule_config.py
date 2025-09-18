@@ -37,6 +37,14 @@ DEFAULT_CONFIG = {
             'enabled': True,
             'description': 'Check if EPIC fix version is less than 5.0'
         },
+        'LabelsInfoRule': {
+            'enabled': True,
+            'description': 'Display labels assigned to the issue'
+        },
+        'CommentCountInfoRule': {
+            'enabled': True,
+            'description': 'Display the number of comments on the issue'
+        },
         
         # Content Rules
         'NoLinkedIssuesRule': {
@@ -78,6 +86,10 @@ DEFAULT_CONFIG = {
         'SubTaskOrphanRule': {
             'enabled': True,
             'description': 'Check parent-child relationships for sub-tasks and stories'
+        },
+        'ToolingTransferRule': {
+            'enabled': True,
+            'description': 'Check if issue has Tooling label or component and suggest transfer to Git'
         }
     },
     

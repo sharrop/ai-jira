@@ -22,16 +22,22 @@ class UnassignedEpicRule(BaseRule):
         
     def check(self, issue: Dict[str, Any], context: Dict[str, Any]) -> List[RuleResult]:
         assignee = issue.get('assignee')
+        status = issue.get('status')
         issue_key = str(issue.get('key', 'UNKNOWN'))
+        issue_type = context.get('issue_type', 'issue')
+        
+        # Only check issues that are in progress-like states
+        if not status or status.lower() not in ['in progress', 'in development', 'in review', 'testing']:
+            return []
         
         if not assignee or assignee == 'Unassigned':
             return [RuleResult(
                 rule_id=self.rule_id,
                 severity=self.severity,
-                message=f"EPIC [{issue_key}] is not assigned to anyone",
+                message=f"{issue_type.upper()} [{issue_key}] is in progress but not assigned to anyone",
                 issue_key=issue_key,
                 passed=False,
-                suggestion="Assign the EPIC to a team member responsible for its delivery"
+                suggestion=f"Assign the {issue_type.lower()} to a team member responsible for its delivery"
             )]
         
         return [RuleResult(
@@ -67,12 +73,13 @@ class InactiveAssigneeRule(BaseRule):
         fields = issue.get('raw_fields', {})
         assignee_data = fields.get('assignee', {})
         is_active = assignee_data.get('active', True)
+        issue_type = context.get('issue_type', 'issue')
         
         if not is_active:
             return [RuleResult(
                 rule_id=self.rule_id,
                 severity=self.severity,
-                message=f"EPIC [{issue_key}] is assigned to an inactive user: {assignee}",
+                message=f"{issue_type.upper()} [{issue_key}] is assigned to an inactive user: {assignee}",
                 issue_key=issue_key,
                 passed=False,
                 suggestion="Reassign to an active team member"

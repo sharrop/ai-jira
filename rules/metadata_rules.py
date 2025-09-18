@@ -24,6 +24,7 @@ class MissingComponentsRule(BaseRule):
         components = issue.get('components', [])
         issue_key = str(issue.get('key', 'UNKNOWN'))
         summary = issue.get('summary', '')
+        issue_type = context.get('issue_type', 'issue')
         
         if not components:
             # Try to suggest components based on TMF number in title
@@ -38,12 +39,12 @@ class MissingComponentsRule(BaseRule):
                 else:
                     suggestion = f"No matching components found for TMF number {tmf_number}"
             else:
-                suggestion = "Add relevant component(s) to categorize this EPIC"
+                suggestion = f"Add relevant component(s) to categorize this {issue_type.lower()}"
             
             return [RuleResult(
                 rule_id=self.rule_id,
                 severity=self.severity,
-                message=f"EPIC [{issue_key}] has no components set",
+                message=f"{issue_type.upper()} [{issue_key}] has no components set",
                 issue_key=issue_key,
                 passed=False,
                 suggestion=suggestion
@@ -74,15 +75,16 @@ class MissingFixVersionRule(BaseRule):
     def check(self, issue: Dict[str, Any], context: Dict[str, Any]) -> List[RuleResult]:
         fix_versions = issue.get('fixVersions', [])
         issue_key = str(issue.get('key', 'UNKNOWN'))
+        issue_type = context.get('issue_type', 'issue')
         
         if not fix_versions:
             return [RuleResult(
                 rule_id=self.rule_id,
                 severity=self.severity,
-                message=f"EPIC [{issue_key}] has no FixVersion set",
+                message=f"{issue_type.upper()} [{issue_key}] has no FixVersion set",
                 issue_key=issue_key,
                 passed=False,
-                suggestion="Set a target release version for this EPIC"
+                suggestion=f"Set a target release version for this {issue_type.lower()}"
             )]
         
         version_names = [version.get('name', 'Unknown') for version in fix_versions]
@@ -115,6 +117,8 @@ class LegacyFixVersionRule(BaseRule):
         if not fix_versions:
             return []  # Handled by MissingFixVersionRule
             
+        issue_type = context.get('issue_type', 'issue')
+        
         for version in fix_versions:
             version_name = version.get('name', '').strip('vVxX')
             version_number = version_name.split('.')[0] if '.' in version_name else version_name
@@ -125,7 +129,7 @@ class LegacyFixVersionRule(BaseRule):
                     results.append(RuleResult(
                         rule_id=self.rule_id,
                         severity=self.severity,
-                        message=f"EPIC [{issue_key}] has legacy FixVersion {version_name} (< 5.0)",
+                        message=f"{issue_type.upper()} [{issue_key}] has legacy FixVersion {version_name} (< 5.0)",
                         issue_key=issue_key,
                         passed=False,
                         suggestion="Consider updating to a current release version"
@@ -166,15 +170,16 @@ class MissingDescriptionRule(BaseRule):
     def check(self, issue: Dict[str, Any], context: Dict[str, Any]) -> List[RuleResult]:
         description = issue.get('description')
         issue_key = str(issue.get('key', 'UNKNOWN'))
+        issue_type = context.get('issue_type', 'issue')
         
         if not description or not description.strip():
             return [RuleResult(
                 rule_id=self.rule_id,
                 severity=self.severity,
-                message=f"EPIC [{issue_key}] has no description",
+                message=f"{issue_type.upper()} [{issue_key}] has no description",
                 issue_key=issue_key,
                 passed=False,
-                suggestion="Add a clear description explaining the EPIC's purpose and acceptance criteria"
+                suggestion=f"Add a clear description explaining the {issue_type.lower()}'s purpose and acceptance criteria"
             )]
         
         # Check if description is too short
@@ -183,7 +188,7 @@ class MissingDescriptionRule(BaseRule):
             return [RuleResult(
                 rule_id=self.rule_id,
                 severity=RuleSeverity.WARNING,
-                message=f"EPIC [{issue_key}] has a very short description ({len(description.strip())} chars)",
+                message=f"{issue_type.upper()} [{issue_key}] has a very short description ({len(description.strip())} chars)",
                 issue_key=issue_key,
                 passed=False,
                 suggestion=f"Expand description to at least {min_length} characters with clear details"
@@ -196,3 +201,81 @@ class MissingDescriptionRule(BaseRule):
             issue_key=issue_key,
             passed=True
         )]
+
+
+class LabelsInfoRule(BaseRule):
+    """Display labels assigned to the issue as INFO"""
+    
+    def get_category(self) -> RuleCategory:
+        return RuleCategory.METADATA
+        
+    def get_severity(self) -> RuleSeverity:
+        return RuleSeverity.INFO
+        
+    def get_description(self) -> str:
+        return "Display labels assigned to the issue"
+        
+    def check(self, issue: Dict[str, Any], context: Dict[str, Any]) -> List[RuleResult]:
+        labels = issue.get('labels', [])
+        issue_key = str(issue.get('key', 'UNKNOWN'))
+        
+        if not labels:
+            return [RuleResult(
+                rule_id=self.rule_id,
+                severity=RuleSeverity.INFO,
+                message=f"No labels assigned",
+                issue_key=issue_key,
+                passed=True
+            )]
+        
+        # Display the labels
+        labels_text = ", ".join(labels)
+        return [RuleResult(
+            rule_id=self.rule_id,
+            severity=RuleSeverity.INFO,
+            message=f"Labels: {labels_text}",
+            issue_key=issue_key,
+            passed=True
+        )]
+
+
+class CommentCountInfoRule(BaseRule):
+    """Display the number of comments on the issue as INFO"""
+    
+    def get_category(self) -> RuleCategory:
+        return RuleCategory.METADATA
+        
+    def get_severity(self) -> RuleSeverity:
+        return RuleSeverity.INFO
+        
+    def get_description(self) -> str:
+        return "Display the number of comments on the issue"
+        
+    def check(self, issue: Dict[str, Any], context: Dict[str, Any]) -> List[RuleResult]:
+        comment_count = issue.get('comment_count', 0)
+        issue_key = str(issue.get('key', 'UNKNOWN'))
+        
+        if comment_count == 0:
+            return [RuleResult(
+                rule_id=self.rule_id,
+                severity=RuleSeverity.INFO,
+                message=f"No comments",
+                issue_key=issue_key,
+                passed=True
+            )]
+        elif comment_count == 1:
+            return [RuleResult(
+                rule_id=self.rule_id,
+                severity=RuleSeverity.INFO,
+                message=f"Has 1 comment",
+                issue_key=issue_key,
+                passed=True
+            )]
+        else:
+            return [RuleResult(
+                rule_id=self.rule_id,
+                severity=RuleSeverity.INFO,
+                message=f"Has {comment_count} comments",
+                issue_key=issue_key,
+                passed=True
+            )]

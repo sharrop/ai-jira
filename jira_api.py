@@ -19,6 +19,28 @@ from exceptions import (
 load_dotenv()
 
 
+def safe_encode_for_cp1252(text):
+    """
+    Safely encode text for Windows CP1252 compatibility when redirecting output to files.
+    
+    Args:
+        text: Input text that may contain Unicode characters
+        
+    Returns:
+        str: Text with Unicode characters replaced by '?' for CP1252 compatibility
+    """
+    if not text:
+        return text
+    
+    # Convert to string if not already
+    if not isinstance(text, str):
+        text = str(text)
+    
+    # Encode to CP1252 with 'replace' error handling, then decode back to string
+    # This will replace any Unicode characters that can't be encoded with '?'
+    return text.encode('cp1252', errors='replace').decode('cp1252')
+
+
 class JiraApiClient:
     def __init__(self, base_url: str = "https://projects.tmforum.org/jira/", 
                  enable_jql_validation: bool = True,
@@ -101,11 +123,11 @@ class JiraApiClient:
                 
                 if response.status_code == 200:
                     user_info = response.json()
-                    print(f"✅ Authenticated as: {user_info.get('displayName', 'Unknown')} ({user_info.get('emailAddress', 'No email')})")
+                    print(f"[AUTH] Authenticated as: {user_info.get('displayName', 'Unknown')} ({user_info.get('emailAddress', 'No email')})")
                     return True
                 elif response.status_code == 401 and not force_refresh:
                     # Cookies expired, try fresh login
-                    print("🔄 Cookies expired, attempting fresh login...")
+                    print("[RETRY] Cookies expired, attempting fresh login...")
                     return await self.authenticate(force_refresh=True)
                 else:
                     error_msg = f"Authentication failed with status {response.status_code}"
@@ -156,9 +178,9 @@ class JiraApiClient:
         response = self.session.request(method, url, **kwargs)
         
         if response.status_code == 401:
-            print("⚠️  Authentication may have expired. Consider refreshing cookies.")
+            print("[WARNING] Authentication may have expired. Consider refreshing cookies.")
         elif response.status_code >= 400:
-            print(f"⚠️  API request failed: {response.status_code} - {response.text[:200]}...")
+            print(f"[WARNING] API request failed: {response.status_code} - {response.text[:200]}...")
         
         return response
     
@@ -203,7 +225,7 @@ class JiraApiClient:
                 elif response.status_code == 429:
                     retry_after = int(response.headers.get('Retry-After', 60))
                     if attempt < max_retries:
-                        print(f"⏱️  Rate limited, waiting {retry_after} seconds before retry {attempt + 1}/{max_retries}")
+                        print(f"[RATE-LIMIT] Rate limited, waiting {retry_after} seconds before retry {attempt + 1}/{max_retries}")
                         await asyncio.sleep(retry_after)
                         continue
                     else:
@@ -215,7 +237,7 @@ class JiraApiClient:
                     # Server error - retry with exponential backoff
                     if attempt < max_retries:
                         wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
-                        print(f"🔄 Server error ({response.status_code}), retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                        print(f"[RETRY] Server error ({response.status_code}), retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
                         await asyncio.sleep(wait_time)
                         continue
                     else:
@@ -234,7 +256,7 @@ class JiraApiClient:
                 last_exception = e
                 if attempt < max_retries:
                     wait_time = 2 ** attempt
-                    print(f"🌐 Connection error, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                    print(f"[NETWORK] Connection error, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
                     await asyncio.sleep(wait_time)
                     continue
                 else:
@@ -244,7 +266,7 @@ class JiraApiClient:
                 last_exception = e
                 if attempt < max_retries:
                     wait_time = 2 ** attempt
-                    print(f"⏰ Request timeout, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                    print(f"[TIMEOUT] Request timeout, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
                     await asyncio.sleep(wait_time)
                     continue
                 else:
@@ -254,7 +276,7 @@ class JiraApiClient:
                 last_exception = e
                 if attempt < max_retries:
                     wait_time = 2 ** attempt
-                    print(f"🔗 Request error, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                    print(f"[REQUEST] Request error, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
                     await asyncio.sleep(wait_time)
                     continue
                 else:
@@ -324,15 +346,15 @@ class JiraApiClient:
                 
                 # Log warnings if any
                 if validation_result['warnings']:
-                    print(f"⚠️  JQL Warnings: {', '.join(validation_result['warnings'])}")
+                    print(f"[WARNING] JQL Warnings: {', '.join(validation_result['warnings'])}")
                 if validation_result['performance_warnings']:
-                    print(f"🐌 Performance Warnings: {', '.join(validation_result['performance_warnings'])}")
+                    print(f"[PERFORMANCE] Performance Warnings: {', '.join(validation_result['performance_warnings'])}")
                 
                 # Use sanitized query
                 jql = validation_result['sanitized_query']
                 
             except JiraValidationError as e:
-                print(f"❌ JQL Validation Failed: {e}")
+                print(f"[ERROR] JQL Validation Failed: {e}")
                 raise
             
         if max_results <= 0:
@@ -345,7 +367,7 @@ class JiraApiClient:
             fields = [
                 'key', 'summary', 'status', 'assignee', 'created',
                 'updated', 'priority', 'issuetype', 'description',
-                'component', 'labels', 'reporter', 'resolution',
+                'components', 'labels', 'reporter', 'resolution',
                 'comment', 'issuelinks', 'issues', 'fixVersions' ]
         
         params = {
@@ -401,8 +423,8 @@ class JiraApiClient:
                 raise JiraValidationError(f"Invalid date format: {date_str}", field_name="date")
             jql = f'project = "AP" AND created >= "{date_str}" ORDER BY created DESC'
         
-        print(f"🔍 Searching for AP project issues created since {date_str}")
-        print(f"📝 JQL Query: {jql}")
+        print(f"[SEARCH] Searching for AP project issues created since {date_str}")
+        print(f"[JQL] JQL Query: {jql}")
         
         try:
             result = await self.search_issues(jql, max_results=max_results, validate_jql=False)  # Already validated
@@ -410,19 +432,23 @@ class JiraApiClient:
             issues = result.get('issues', [])
             total = result.get('total', 0)
             
-            print(f"📊 Found {len(issues)} issues (Total: {total})")
+            print(f"[RESULTS] Found {len(issues)} issues (Total: {total})")
             
             # Process and return simplified issue data
             processed_issues = []
             for issue in issues:
-                print(f"Raw Issue:\n{json.dumps(issue, indent=2)}")
+                try:
+                    issue_json = json.dumps(issue, indent=2, ensure_ascii=True)
+                    print(f"Raw Issue:\n{safe_encode_for_cp1252(issue_json)}")
+                except Exception as e:
+                    print(f"[WARNING] Could not serialize issue JSON: {e}")
                 fields = issue.get('fields', {})
                 # Process comments first
                 comment_data = []
                 comment_count = fields.get('comment', {}).get('total', 0) if fields.get('comment') else 0
                 
                 if comment_count > 0:
-                    print(f"💬 Found {comment_count} comments:")
+                    print(f"[COMMENTS] Found {comment_count} comments:")
                     comments = fields.get('comment', {}).get('comments', [])                
                     for comment in comments:
                         comment_info = {
@@ -435,8 +461,8 @@ class JiraApiClient:
                         comment_data.append(comment_info)
                         
                         # Print comment for debugging
-                        print(f"  Comment by {comment_info['author']} at {comment_info['created']}:")
-                        print(f"    {comment_info['body'][:100]}...")
+                        print(f"  Comment by {safe_encode_for_cp1252(comment_info['author'])} at {comment_info['created']}:")
+                        print(f"    {safe_encode_for_cp1252(comment_info['body'][:100])}...")
                         print()
 
                 processed_issue = {
@@ -455,7 +481,11 @@ class JiraApiClient:
                 }
                 
                 processed_issues.append(processed_issue)
-                print(f"Processed Issue:\n{json.dumps(processed_issue, indent=2)}")
+                try:
+                    processed_json = json.dumps(processed_issue, indent=2, ensure_ascii=True)
+                    print(f"Processed Issue:\n{safe_encode_for_cp1252(processed_json)}")
+                except Exception as e:
+                    print(f"[WARNING] Could not serialize processed issue JSON: {e}")
             
             return processed_issues
             
@@ -609,7 +639,7 @@ async def get_ap_issues_quick() -> List[Dict[str, Any]]:
     if await client.authenticate():
         return await client.get_ap_issues_last_month()
     else:
-        print("❌ Failed to authenticate with JIRA")
+        print("[ERROR] Failed to authenticate with JIRA")
         return []
 
 
@@ -618,25 +648,25 @@ if __name__ == "__main__":
     async def main():
         client = JiraApiClient()
         
-        print("🔐 Authenticating with JIRA...")
+        print("[AUTH] Authenticating with JIRA...")
         if await client.authenticate():
-            print("\n📋 Getting AP project issues from last month...")
+            print("\n[DATA] Getting AP project issues from last month...")
             issues = await client.get_ap_issues_last_month()
             
             if issues:
-                print(f"\n📊 Found {len(issues)} issues in AP project:")
+                print(f"\n[RESULTS] Found {len(issues)} issues in AP project:")
                 print("=" * 80)
                 
                 for i, issue in enumerate(issues, 1):
-                    print(f"{i:2}. {issue['key']}: {issue['summary'][:60]}...")
-                    print(f"    Status: {issue['status']} | Assignee: {issue['assignee']}")
+                    print(f"{i:2}. {issue['key']}: {safe_encode_for_cp1252(issue['summary'][:60])}...")
+                    print(f"    Status: {issue['status']} | Assignee: {safe_encode_for_cp1252(issue['assignee'])}")
                     print(f"    Created: {issue['created'][:10]} | Type: {issue['issue_type']}")
                     print(f"    URL: {issue['url']}")
                     print()
             else:
-                print("❌ No issues found or error occurred")
+                print("[ERROR] No issues found or error occurred")
         else:
-            print("❌ Authentication failed")
+            print("[ERROR] Authentication failed")
     
     # Run the example
     asyncio.run(main())

@@ -41,10 +41,22 @@ class HighPriorityStaleRule(BaseRule):
             )]
         
         from datetime import datetime, timedelta
+        import re
         
         try:
-            updated_date = datetime.strptime(updated[:10], '%Y-%m-%d')
-            days_since_update = (datetime.now() - updated_date).days
+            # Parse the full JIRA datetime format for more accurate calculation
+            clean_date = re.sub(r'\.\d{3}\+\d{4}$|Z$', '', updated)
+            
+            if 'T' in clean_date:
+                # Full datetime format
+                updated_date = datetime.strptime(clean_date, '%Y-%m-%dT%H:%M:%S')
+            else:
+                # Date only format (fallback)
+                updated_date = datetime.strptime(updated[:10], '%Y-%m-%d')
+            
+            # Calculate more precise time difference
+            time_diff = datetime.now() - updated_date
+            days_since_update = int(time_diff.total_seconds() / 86400)
             
             # High priority issues should be updated within 7 days
             if days_since_update > 7:
@@ -137,10 +149,22 @@ class InProgressTooLongRule(BaseRule):
             return []
         
         from datetime import datetime
+        import re
         
         try:
-            created_date = datetime.strptime(created[:10], '%Y-%m-%d')
-            days_in_progress = (datetime.now() - created_date).days
+            # Parse the full JIRA datetime format for more accurate calculation
+            clean_date = re.sub(r'\.\d{3}\+\d{4}$|Z$', '', created)
+            
+            if 'T' in clean_date:
+                # Full datetime format
+                created_date = datetime.strptime(clean_date, '%Y-%m-%dT%H:%M:%S')
+            else:
+                # Date only format (fallback)
+                created_date = datetime.strptime(created[:10], '%Y-%m-%d')
+            
+            # Calculate more precise time difference
+            time_diff = datetime.now() - created_date
+            days_in_progress = int(time_diff.total_seconds() / 86400)
             
             # Different thresholds for different issue types
             thresholds = {
@@ -214,7 +238,7 @@ class SubTaskOrphanRule(BaseRule):
                 return [RuleResult(
                     rule_id=self.rule_id,
                     severity=self.severity,
-                    message=f"Sub-task [{issue_key}] has no parent issue",
+                    message=f"{issue_type.upper()} [{issue_key}] has no parent issue",
                     issue_key=issue_key,
                     passed=False,
                     suggestion="Link this sub-task to its parent Story or Epic"
@@ -236,10 +260,10 @@ class SubTaskOrphanRule(BaseRule):
                 return [RuleResult(
                     rule_id=self.rule_id,
                     severity=RuleSeverity.INFO,
-                    message=f"Large Story [{issue_key}] might benefit from sub-tasks",
+                    message=f"Large {issue_type.upper()} [{issue_key}] might benefit from sub-tasks",
                     issue_key=issue_key,
                     passed=True,  # This is just a suggestion
-                    suggestion="Consider breaking this large story into smaller sub-tasks for better tracking"
+                    suggestion=f"Consider breaking this large {issue_type.lower()} into smaller sub-tasks for better tracking"
                 )]
         
         return [RuleResult(
@@ -249,3 +273,54 @@ class SubTaskOrphanRule(BaseRule):
             issue_key=issue_key,
             passed=True
         )]
+
+
+class ToolingTransferRule(BaseRule):
+    """Check if issue has 'Tooling' label and suggest transfer to Git"""
+    
+    def get_category(self) -> RuleCategory:
+        return RuleCategory.BUSINESS
+        
+    def get_severity(self) -> RuleSeverity:
+        return RuleSeverity.WARNING
+        
+    def get_description(self) -> str:
+        return "Check if issue has 'Tooling' label or component and suggest transfer to Git"
+        
+    def check(self, issue: Dict[str, Any], context: Dict[str, Any]) -> List[RuleResult]:
+        labels = issue.get('labels', [])
+        components = issue.get('components', [])
+        issue_key = str(issue.get('key', 'UNKNOWN'))
+        issue_type = context.get('issue_type', 'issue')
+        
+        # Check for 'Tooling' label (case-insensitive)
+        has_tooling_label = any(
+            label.lower() == 'tooling' for label in labels if isinstance(label, str)
+        )
+        
+        # Check for 'Tooling' component (case-insensitive)
+        has_tooling_component = any(
+            comp.get('name', '').lower() == 'tooling' 
+            for comp in components if isinstance(comp, dict)
+        )
+        
+        if has_tooling_label or has_tooling_component:
+            # Determine what triggered the rule for more specific messaging
+            trigger_source = []
+            if has_tooling_label:
+                trigger_source.append("label")
+            if has_tooling_component:
+                trigger_source.append("component")
+            
+            trigger_text = " and ".join(trigger_source)
+            
+            return [RuleResult(
+                rule_id=self.rule_id,
+                severity=self.severity,
+                message=f"{issue_type.upper()} [{issue_key}] has 'Tooling' {trigger_text} and should be transferred to Git",
+                issue_key=issue_key,
+                passed=False,
+                suggestion=f"Consider transferring this {issue_type.lower()} to a Git repository issue tracker and closing it in JIRA. Tooling-related work is better managed in Git where code changes are tracked."
+            )]
+        
+        return []

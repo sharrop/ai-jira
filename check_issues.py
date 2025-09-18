@@ -25,6 +25,31 @@ from rule_config import DEFAULT_CONFIG
 # Global variable to cache the TMF APIs dataframe
 _tmf_apis_df = None
 
+# Global variable to track labels and their usage
+_label_tracker = {}
+
+
+def safe_encode_for_cp1252(text):
+    """
+    Safely encode text for Windows CP1252 compatibility when redirecting output to files.
+    
+    Args:
+        text: Input text that may contain Unicode characters
+        
+    Returns:
+        str: Text with Unicode characters replaced by '?' for CP1252 compatibility
+    """
+    if not text:
+        return text
+    
+    # Convert to string if not already
+    if not isinstance(text, str):
+        text = str(text)
+    
+    # Encode to CP1252 with 'replace' error handling, then decode back to string
+    # This will replace any Unicode characters that can't be encoded with '?'
+    return text.encode('cp1252', errors='replace').decode('cp1252')
+
 
 def load_tmf_apis():
     """
@@ -38,12 +63,11 @@ def load_tmf_apis():
     if _tmf_apis_df is None:
         try:
             _tmf_apis_df = pd.read_csv('data/tmf_apis.csv')
-            print(f"📊 Loaded {len(_tmf_apis_df)} TMF APIs from data/tmf_apis.csv")
         except FileNotFoundError:
-            print("⚠️  Warning: data/tmf_apis.csv not found. TMF API lookup will not be available.")
+            print("[WARNING] data/tmf_apis.csv not found. TMF API lookup will not be available.")
             _tmf_apis_df = pd.DataFrame()  # Empty dataframe
         except Exception as e:
-            print(f"⚠️  Warning: Error loading data/tmf_apis.csv: {e}")
+            print(f"[WARNING] Error loading data/tmf_apis.csv: {e}")
             _tmf_apis_df = pd.DataFrame()  # Empty dataframe
     
     return _tmf_apis_df
@@ -161,6 +185,119 @@ def enrich_issue_with_tmf_info(issue):
     return enriched_issue
 
 
+def track_labels(issue_key, labels, issue_url, issue_summary, issue_type):
+    """
+    Track labels and the issues that use them for final reporting.
+    
+    Args:
+        issue_key (str): JIRA issue key
+        labels (list): List of labels for this issue
+        issue_url (str): URL to the JIRA issue
+        issue_summary (str): Issue summary/title
+        issue_type (str): Type of issue (Epic, Story, etc.)
+    """
+    global _label_tracker
+    
+    if not labels:
+        return
+    
+    for label in labels:
+        if label not in _label_tracker:
+            _label_tracker[label] = []
+        
+        # Add issue info to this label's tracking
+        _label_tracker[label].append({
+            'key': issue_key,
+            'url': issue_url,
+            'summary': issue_summary,
+            'type': issue_type
+        })
+
+
+def generate_label_report():
+    """
+    Generate a comprehensive report of all labels found and their usage.
+    """
+    global _label_tracker
+    
+    if not _label_tracker:
+        print("\n[REPORT] LABEL USAGE REPORT")
+        print("=" * 60)
+        print("   No labels found in any checked issues.")
+        return
+    
+    print("\n[REPORT] LABEL USAGE REPORT")
+    print("=" * 60)
+    
+    # Sort labels by usage count (most used first)
+    sorted_labels = sorted(_label_tracker.items(), key=lambda x: len(x[1]), reverse=True)
+    
+    total_labels = len(sorted_labels)
+    total_usages = sum(len(issues) for issues in _label_tracker.values())
+    
+    print(f"[SUMMARY]:")
+    print(f"   Total unique labels found: {total_labels}")
+    print(f"   Total label usages: {total_usages}")
+    print(f"   Average labels per issue: {total_usages / len(set(issue['key'] for issues in _label_tracker.values() for issue in issues)):.1f}")
+    
+    print(f"\n[LABELS] Label Details (sorted by usage count):")
+    print("-" * 60)
+    
+    for i, (label, issues) in enumerate(sorted_labels, 1):
+        print(f"\n{i:2}. Label: '{label}' (used {len(issues)} times)")
+        
+        # Group by issue type for better organization
+        by_type = {}
+        for issue in issues:
+            issue_type = issue['type']
+            if issue_type not in by_type:
+                by_type[issue_type] = []
+            by_type[issue_type].append(issue)
+        
+        # Display grouped by type
+        for issue_type, type_issues in sorted(by_type.items()):
+            print(f"    {issue_type}s ({len(type_issues)}):")
+            for issue in type_issues:
+                # Truncate long summaries
+                summary = issue['summary']
+                if len(summary) > 80:
+                    summary = summary[:77] + "..."
+                print(f"      - {issue['key']}: {safe_encode_for_cp1252(summary)}")
+                print(f"        URL: {issue['url']}")
+    
+    # Additional insights
+    print(f"\n[INSIGHTS] Label Insights:")
+    print("-" * 40)
+    
+    # Most popular labels
+    top_labels = sorted_labels[:5]
+    print(f"   Top 5 most used labels:")
+    for i, (label, issues) in enumerate(top_labels, 1):
+        print(f"     {i}. '{label}' - {len(issues)} issues")
+    
+    # Labels used only once
+    single_use_labels = [label for label, issues in sorted_labels if len(issues) == 1]
+    if single_use_labels:
+        print(f"   Labels used only once ({len(single_use_labels)}):")
+        for label in single_use_labels[:10]:  # Show first 10
+            print(f"     - '{label}'")
+        if len(single_use_labels) > 10:
+            print(f"     ... and {len(single_use_labels) - 10} more")
+    
+    # Issue types using labels
+    type_label_usage = {}
+    for label, issues in _label_tracker.items():
+        for issue in issues:
+            issue_type = issue['type']
+            if issue_type not in type_label_usage:
+                type_label_usage[issue_type] = set()
+            type_label_usage[issue_type].add(label)
+    
+    print(f"   Label usage by issue type:")
+    for issue_type, labels in sorted(type_label_usage.items()):
+        print(f"     {issue_type}: {len(labels)} unique labels")
+
+
 async def main():
     """Run data quality checks on various JIRA issue types in the AP project"""
     print("Checking for JIRA Issue data quality issues in AP project")
@@ -171,19 +308,19 @@ async def main():
         client = JiraApiClient()
         
         # Initialize rule engine
-        print("🔍 Debug: Creating rule engine...")
+        print("[DEBUG] Creating rule engine...")
         rule_engine = RuleEngine(config=DEFAULT_CONFIG)
-        print("🔍 Debug: Getting rule summary...")
+        print("[DEBUG] Getting rule summary...")
         summary = rule_engine.get_rule_summary()
-        print(f"🔍 Debug: Summary keys: {list(summary.keys())}")
+        print(f"[DEBUG] Summary keys: {list(summary.keys())}")
         
-        print(f"\n📋 Rule Engine initialized:")
+        print(f"\n[RULES] Rule Engine initialized:")
         print(f"   {summary['enabled_rules']}/{summary['total_rules']} rules enabled")
         for category, rules in summary['rules_by_category'].items():
             print(f"   - {category}: {len(rules)} rules")
         
         # Authenticate
-        print("\n🔐 Step 1: Authenticating with JIRA...")
+        print("\n[AUTH] Step 1: Authenticating with JIRA...")
         if not await client.authenticate():
             print("JIRA Authentication failed. Check your credentials in .env file.")
             return
@@ -193,11 +330,11 @@ async def main():
                 print(f"   Logged in as: {user_info.get('displayName', 'Unknown')}")
                 print(f"   Email: {user_info.get('emailAddress', 'Not provided')}")
             else:
-                print("   ❌ Could not retrieve user info after authentication")
+                print("   [ERROR] Could not retrieve user info after authentication")
                 return
         
         # Get project components for context
-        print("\n📦 Step 2: Loading project components...")
+        print("\n[SETUP] Step 2: Loading project components...")
         components = await client.get_project_components("AP")
         component_names = [comp.get('name') for comp in components if comp.get('name')]
         print(f"   Found {len(component_names)} Components in AP project")
@@ -212,7 +349,7 @@ async def main():
         ]
         
         # Allow user to choose which issue types to check
-        print(f"\n🎯 Step 3: Selecting issue types to check...")
+        print(f"\n[SELECT] Step 3: Selecting issue types to check...")
         print("Available issue types:")
         for i, issue_type in enumerate(issue_types_to_check, 1):
             print(f"   {i}. {issue_type['name']}")
@@ -228,7 +365,7 @@ async def main():
             jql_filter = issue_type_config['jql_filter']
             
             print(f"\n" + "=" * 80)
-            print(f"🔍 CHECKING {issue_type_name.upper()} ISSUES")
+            print(f"[CHECK] CHECKING {issue_type_name.upper()} ISSUES")
             print("=" * 80)
             
             # Build JQL query for this issue type
@@ -239,7 +376,7 @@ async def main():
             time_filter = ' AND (updated >= "-6M" OR status = "In Progress")'  # Last 6 months or in progress
             full_jql = base_jql + time_filter
             
-            print(f"📊 JQL Query: {full_jql}")
+            print(f"[QUERY] JQL Query: {full_jql}")
             
             # Get issues
             try:
@@ -249,10 +386,10 @@ async def main():
                     issues_raw = search_results.get('issues', [])
                     total = search_results.get('total', 0)
                     
-                    print(f"\n📈 Results: Found {len(issues_raw)} {issue_type_name} issues to check (Total matching: {total})")
+                    print(f"\n[RESULTS] Found {len(issues_raw)} {issue_type_name} issues to check (Total matching: {total})")
                     
                     if len(issues_raw) == 0:
-                        print(f"   ✅ No {issue_type_name} issues found matching criteria")
+                        print(f"   [OK] No {issue_type_name} issues found matching criteria")
                         continue
                     
                     # Initialize counters for summary
@@ -295,25 +432,34 @@ async def main():
                             'raw_fields': fields  # Keep raw fields for rules that need them
                         }
                         
+                        # Track labels for final report
+                        track_labels(
+                            processed_issue['key'],
+                            processed_issue['labels'],
+                            processed_issue['url'],
+                            processed_issue['summary'],
+                            issue_type_name
+                        )
+                        
                         print(f"\n{i:2}. {issue_type_name}: {processed_issue['key']}")
-                        print(f"    Title: {processed_issue['summary']}")
+                        print(f"    Title: {safe_encode_for_cp1252(processed_issue['summary'])}")
                         print(f"    Status: {processed_issue['status']}")
                         
                         # Display assignee with email if available
                         if processed_issue['assignee_email']:
-                            print(f"    Assignee: {processed_issue['assignee']} ({processed_issue['assignee_email']})")
+                            print(f"    Assignee: {safe_encode_for_cp1252(processed_issue['assignee'])} ({processed_issue['assignee_email']})")
                         else:
-                            print(f"    Assignee: {processed_issue['assignee']}")
+                            print(f"    Assignee: {safe_encode_for_cp1252(processed_issue['assignee'])}")
                         
                         print(f"    URL: {processed_issue['url']}")
                         
                         # Check for TMF API references and enrich the issue
                         enriched_issue = enrich_issue_with_tmf_info(processed_issue)
                         if enriched_issue['tmf_apis']:
-                            print(f"    🔗 TMF APIs Referenced:")
+                            print(f"    [TMF] TMF APIs Referenced:")
                             for api_info in enriched_issue['tmf_apis']:
-                                print(f"       • {api_info['tmf_code']}: {api_info['long_name']} (Latest: {api_info['highest_version']})")
-                                print(f"         📖 Documentation: {api_info['url']}")
+                                print(f"       - {api_info['tmf_code']}: {api_info['long_name']} (Latest: {api_info['highest_version']})")
+                                print(f"         Documentation: {api_info['url']}")
                         
                         # Run all rules against this issue
                         context = {
@@ -345,7 +491,7 @@ async def main():
                             print("    " + "-" * 60)
                     
                     # Print summary for this issue type
-                    print(f"\n📊 {issue_type_name} Summary:")
+                    print(f"\n[SUMMARY] {issue_type_name} Summary:")
                     print(f"   Issues checked: {total_issues_checked}")
                     print(f"   Total violations: {total_violations}")
                     if violations_by_severity:
@@ -359,24 +505,27 @@ async def main():
                     
                     # Quality assessment
                     if violation_rate == 0:
-                        print("   🏆 Data Quality: EXCELLENT - No issues found!")
+                        print("   [EXCELLENT] Data Quality: EXCELLENT - No issues found!")
                     elif violation_rate < 2:
-                        print("   ✅ Data Quality: GOOD - Minor issues found")
+                        print("   [GOOD] Data Quality: GOOD - Minor issues found")
                     elif violation_rate < 5:
-                        print("   ⚠️  Data Quality: NEEDS ATTENTION - Multiple issues found")
+                        print("   [WARNING] Data Quality: NEEDS ATTENTION - Multiple issues found")
                     else:
-                        print("   ❌ Data Quality: POOR - Many issues require immediate attention")
+                        print("   [POOR] Data Quality: POOR - Many issues require immediate attention")
                 
                 else:
-                    print(f"   ✅ No {issue_type_name} issues found matching the criteria")
+                    print(f"   [OK] No {issue_type_name} issues found matching the criteria")
                     
             except JiraApiError as e:
-                print(f"   ❌ Error fetching {issue_type_name} issues: {e}")
+                print(f"   [ERROR] Error fetching {issue_type_name} issues: {e}")
                 continue
         
+        # Generate comprehensive label usage report
+        generate_label_report()
+        
         print("\n" + "=" * 100)
-        print("✅ Multi-issue type data quality check completed successfully!")
-        print("\n💡 Tips for improving data quality:")
+        print("[SUCCESS] Multi-issue type data quality check completed successfully!")
+        print("\n[TIPS] Tips for improving data quality:")
         print("   - Ensure all issues are properly assigned")
         print("   - Add meaningful descriptions to all issues")
         print("   - Set appropriate components and fix versions")
@@ -384,25 +533,25 @@ async def main():
         print("   - Link related issues together")
         
     except JiraAuthenticationError as e:
-        print(f"\n❌ Authentication Error: {e}")
+        print(f"\n[ERROR] Authentication Error: {e}")
         print("Please check your JIRA credentials in the .env file")
         raise
     except JiraNetworkError as e:
-        print(f"\n❌ Network Error: {e}")
+        print(f"\n[ERROR] Network Error: {e}")
         print("Please check your network connection and proxy settings")
         raise
     except JiraValidationError as e:
-        print(f"\n❌ Validation Error: {e}")
+        print(f"\n[ERROR] Validation Error: {e}")
         raise
     except JiraConfigurationError as e:
-        print(f"\n❌ Configuration Error: {e}")
+        print(f"\n[ERROR] Configuration Error: {e}")
         print("Please check your environment configuration")
         raise
     except JiraApiError as e:
-        print(f"\n❌ JIRA API Error: {e}")
+        print(f"\n[ERROR] JIRA API Error: {e}")
         raise
     except Exception as e:
-        print(f"\n❌ Unexpected Error during multi-issue check: {e}")
+        print(f"\n[ERROR] Unexpected Error during multi-issue check: {e}")
         import traceback
         traceback.print_exc()
         raise
@@ -424,7 +573,7 @@ async def check_specific_issue_type(issue_type: str, max_results: int = 50):
         rule_engine = RuleEngine(config=DEFAULT_CONFIG)
         
         if not await client.authenticate():
-            print("❌ Authentication failed")
+            print("[ERROR] Authentication failed")
             return
         
         components = await client.get_project_components("AP")
@@ -435,7 +584,7 @@ async def check_specific_issue_type(issue_type: str, max_results: int = 50):
         
         if search_results and search_results.get('issues'):
             issues = search_results.get('issues', [])
-            print(f"📊 Found {len(issues)} {issue_type} issues to check")
+            print(f"[DATA] Found {len(issues)} {issue_type} issues to check")
             
             for i, issue in enumerate(issues, 1):
                 fields = issue.get('fields', {})
@@ -462,11 +611,11 @@ async def check_specific_issue_type(issue_type: str, max_results: int = 50):
                 
                 # Display issue info with email
                 if processed_issue['assignee_email']:
-                    print(f"\n{i}. {processed_issue['key']}: {processed_issue['summary']}")
-                    print(f"    Assignee: {processed_issue['assignee']} ({processed_issue['assignee_email']})")
+                    print(f"\n{i}. {processed_issue['key']}: {safe_encode_for_cp1252(processed_issue['summary'])}")
+                    print(f"    Assignee: {safe_encode_for_cp1252(processed_issue['assignee'])} ({processed_issue['assignee_email']})")
                 else:
-                    print(f"\n{i}. {processed_issue['key']}: {processed_issue['summary']}")
-                    print(f"    Assignee: {processed_issue['assignee']}")
+                    print(f"\n{i}. {processed_issue['key']}: {safe_encode_for_cp1252(processed_issue['summary'])}")
+                    print(f"    Assignee: {safe_encode_for_cp1252(processed_issue['assignee'])}")
                 
                 context = {
                     'components': component_names,
@@ -477,10 +626,10 @@ async def check_specific_issue_type(issue_type: str, max_results: int = 50):
                 results = rule_engine.run_rules(processed_issue, context)
                 RuleReporter.display_results(results, show_passed=False, group_by_severity=True)
         else:
-            print(f"✅ No {issue_type} issues found")
+            print(f"[OK] No {issue_type} issues found")
             
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERROR] Error: {e}")
 
 
 if __name__ == "__main__":
@@ -491,22 +640,22 @@ if __name__ == "__main__":
         issue_type = sys.argv[1]
         max_results = int(sys.argv[2]) if len(sys.argv) > 2 else 50
         
-        print(f"🎯 Checking specific issue type: {issue_type}")
+        print(f"[TARGET] Checking specific issue type: {issue_type}")
         try:
             asyncio.run(check_specific_issue_type(issue_type, max_results))
         except (JiraApiError, JiraAuthenticationError, JiraNetworkError, JiraValidationError, JiraConfigurationError) as e:
-            print(f"\n❌ JIRA Error: {e}")
+            print(f"\n[ERROR] JIRA Error: {e}")
             exit(1)
         except Exception as e:
-            print(f"\n❌ Unexpected Error: {e}")
+            print(f"\n[ERROR] Unexpected Error: {e}")
             exit(1)
     else:
         # Run full multi-issue type check
         try:
             asyncio.run(main())
         except (JiraApiError, JiraAuthenticationError, JiraNetworkError, JiraValidationError, JiraConfigurationError) as e:
-            print(f"\n❌ JIRA Error: {e}")
+            print(f"\n[ERROR] JIRA Error: {e}")
             exit(1)
         except Exception as e:
-            print(f"\n❌ Unexpected Error: {e}")
+            print(f"\n[ERROR] Unexpected Error: {e}")
             exit(1)

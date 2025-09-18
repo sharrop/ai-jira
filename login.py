@@ -48,17 +48,17 @@ class JiraLoginBot:
         async with async_playwright() as p:
             # Launch browser with appropriate configuration
             if proxy_config:
-                print(f"🌐 Launching browser with proxy: {getattr(proxy_config, 'server', 'Unknown')}")
+                print(f"[BROWSER] Launching browser with proxy: {getattr(proxy_config, 'server', 'Unknown')}")
                 browser = await p.chromium.launch(headless=self.headless, proxy=proxy_config)
             else:
-                print("🌐 Launching browser...")
+                print("[BROWSER] Launching browser...")
                 browser = await p.chromium.launch(headless=self.headless)
             
             try:
                 yield browser
             finally:
                 await browser.close()
-                print("🔄 Browser closed safely")
+                print("[BROWSER] Browser closed safely")
     
     @asynccontextmanager
     async def browser_context(self, browser: Browser) -> AsyncIterator[BrowserContext]:
@@ -74,13 +74,13 @@ class JiraLoginBot:
         Ensures:
             Browser context is always closed, even if exceptions occur
         """
-        print("📄 Creating browser context...")
+        print("[CONTEXT] Creating browser context...")
         context = await browser.new_context()
         try:
             yield context
         finally:
             await context.close()
-            print("🔄 Browser context closed safely")
+            print("[CONTEXT] Browser context closed safely")
     
     @asynccontextmanager
     async def page_session(self, context: BrowserContext) -> AsyncIterator[Page]:
@@ -96,13 +96,13 @@ class JiraLoginBot:
         Ensures:
             Page is always closed, even if exceptions occur
         """
-        print("📋 Creating new page...")
+        print("[PAGE] Creating new page...")
         page = await context.new_page()
         try:
             yield page
         finally:
             await page.close()
-            print("🔄 Page closed safely")
+            print("[PAGE] Page closed safely")
     
     async def get_cookies(self, force_refresh=False):
         """Get cookies either from cache, file, or by performing fresh login"""

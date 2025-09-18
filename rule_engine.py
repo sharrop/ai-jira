@@ -93,7 +93,7 @@ class RuleEngine:
                     all_results.extend(results)
             except Exception as e:
                 # Log error but continue with other rules
-                print(f"⚠️ Error running rule {rule.rule_id}: {e}")
+                print(f"[WARNING] Error running rule {rule.rule_id}: {e}")
                 # Create an error result
                 error_result = RuleResult(
                     rule_id=rule.rule_id,
@@ -148,7 +148,7 @@ class RuleReporter:
             group_by_severity: Whether to group results by severity
         """
         if not results:
-            print("    ✅ No issues found")
+            print("    [OK] No issues found")
             return
             
         if group_by_severity:
@@ -162,7 +162,8 @@ class RuleReporter:
         by_severity = defaultdict(list)
         
         for result in results:
-            if result.passed and not show_passed:
+            # Always show INFO messages, even if show_passed is False
+            if result.passed and not show_passed and result.severity != RuleSeverity.INFO:
                 continue
             by_severity[result.severity].append(result)
             
@@ -179,7 +180,8 @@ class RuleReporter:
     def _display_linear_results(results: List[RuleResult], show_passed: bool):
         """Display results in linear order"""
         for result in results:
-            if result.passed and not show_passed:
+            # Always show INFO messages, even if show_passed is False
+            if result.passed and not show_passed and result.severity != RuleSeverity.INFO:
                 continue
             print(f"    {result}")
     
