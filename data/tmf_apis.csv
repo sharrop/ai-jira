@@ -1,0 +1,105 @@
+Long Name,Short Name (TMF Code),URL,Versions
+Sales Management API,TMF699,https://www.tmforum.org/oda/open-apis/directory/sales-management-api-TMF699/v4.0,v4; v5
+Appointment Management API,TMF646,https://www.tmforum.org/oda/open-apis/directory/appointment-management-api-TMF646/v4.0,v3; v4
+Customer Bill Management API,TMF678,https://www.tmforum.org/oda/open-apis/directory/customer-bill-management-api-TMF678/v5.0,v4; v5
+Customer Management API,TMF629,https://www.tmforum.org/oda/open-apis/directory/customer-management-api-TMF629/v5.0,v4; v5
+Customer360 Management API,TMF717,https://www.tmforum.org/oda/open-apis/directory/customer360-management-api-TMF717/v4.0,v4; v5
+Payment Management API,TMF676,https://www.tmforum.org/oda/open-apis/directory/payment-management-api-TMF676/v4.0,v1; v4
+Payment Method Management API,TMF670,https://www.tmforum.org/oda/open-apis/directory/payment-method-management-api-TMF670/v4.0,v4; v5
+Prepay Balance Management API,TMF654,https://www.tmforum.org/oda/open-apis/directory/prepay-balance-management-api-TMF654/v4.0,v4; v5
+Product Configuration Management API,TMF760,https://www.tmforum.org/oda/open-apis/directory/product-configuration-management-api-TMF760/v5.0,v5
+Product Ordering Management API,TMF622,https://www.tmforum.org/oda/open-apis/directory/product-ordering-management-api-TMF622/v5.0,v4; v5
+Quote Management API,TMF648,https://www.tmforum.org/oda/open-apis/directory/quote-management-api-TMF648/v4.0,v4; v5
+Recommendation Management API,TMF680,https://www.tmforum.org/oda/open-apis/directory/recommendation-management-api-TMF680/v4.0,v2; v4
+Risk Management API,TMF696,https://www.tmforum.org/oda/open-apis/directory/risk-management-api-TMF696/v4.0,v4; v5
+Shopping Cart Management API,TMF663,https://www.tmforum.org/oda/open-apis/directory/shopping-cart-management-api-TMF663/v5.0,v4; v5
+Loyalty Management API,TMF658,https://www.tmforum.org/oda/open-apis/directory/loyalty-management-api-TMF658/v4.0,v4; v5
+Open Gateway Product Catalog API,TMF936,https://www.tmforum.org/oda/open-apis/directory/open-gateway-product-catalog-api-TMF936/v5.0,v5
+Product Catalog Management API,TMF620,https://www.tmforum.org/oda/open-apis/directory/product-catalog-management-api-TMF620/v5.0,v4; v5
+Product Inventory Management API,TMF637,https://www.tmforum.org/oda/open-apis/directory/product-inventory-management-api-TMF637/v5.0,v4; v5
+Product Offering Qualification Management API,TMF679,https://www.tmforum.org/oda/open-apis/directory/product-offering-qualification-management-api-TMF679/v5.0,v4; v5
+Product Test API,TMF769,https://www.tmforum.org/oda/open-apis/directory/product-test-api-TMF769/v5.0,v5
+Product Usage Management API,TMF767,https://www.tmforum.org/oda/open-apis/directory/product-usage-management-api-TMF767/v5.0,v5
+Promotion Management API,TMF671,https://www.tmforum.org/oda/open-apis/directory/promotion-management-api-TMF671/v4.1,v4; v5
+Usage Consumption Management API,TMF677,https://www.tmforum.org/oda/open-apis/directory/usage-consumption-management-api-TMF677/v5.0.0,v4; v5
+Usage Management API,TMF635,https://www.tmforum.org/oda/open-apis/directory/usage-management-api-TMF635/v4.0,v4
+DCS 5GSlice Service Activation API,TMF924,https://www.tmforum.org/oda/open-apis/directory/dcs-5gslice-service-activation-api-TMF924/v4.0,v4
+IoT Service Management API,TMF914,https://www.tmforum.org/oda/open-apis/directory/iot-service-management-api-TMF914,v4
+Network as a Service Management API,TMF909,https://www.tmforum.org/oda/open-apis/directory/network-as-a-service-management-api-TMF909/v3.0.0,v3; v4
+Outage Management API,TMF777,https://www.tmforum.org/oda/open-apis/directory/outage-management-api-TMF777,v5
+Service Activation Management API,TMF640,https://www.tmforum.org/oda/open-apis/directory/service-activation-management-api-TMF640/v4.0,v4; v5
+Service Catalog Management API,TMF633,https://www.tmforum.org/oda/open-apis/directory/service-catalog-management-api-TMF633/v4.0,v4; v5
+Service Inventory Management API,TMF638,https://www.tmforum.org/oda/open-apis/directory/service-inventory-management-api-TMF638/v5.0,v4; v5
+Service Ordering Management API,TMF641,https://www.tmforum.org/oda/open-apis/directory/service-ordering-management-api-TMF641/v4.1,v4; v5
+Service Problem Management API,TMF656,https://www.tmforum.org/oda/open-apis/directory/service-problem-management-api-TMF656/v5.0,v4; v5
+Service Qualification Management API,TMF645,https://www.tmforum.org/oda/open-apis/directory/service-qualification-management-api-TMF645/v4.0,v4; v5
+Service Quality Management Management API,TMF657,https://www.tmforum.org/oda/open-apis/directory/service-quality-management-management-api-TMF657/v4.0,v1; v4
+Service Test Management API,TMF653,https://www.tmforum.org/oda/open-apis/directory/service-test-management-api-TMF653/v4.2,v4; v5
+Service Usage Management API,TMF727,https://www.tmforum.org/oda/open-apis/directory/service-usage-management-api-TMF727/v4.0,v4; v5
+Alarm Management API,TMF642,https://www.tmforum.org/oda/open-apis/directory/alarm-management-api-TMF642/v5.0,v4; v5
+IoT Agent and Device Management API,TMF908,https://www.tmforum.org/oda/open-apis/directory/iot-agent-and-device-management-api-TMF908/v4.0,v4
+Private Optimized Binding,TMF759,https://www.tmforum.org/oda/open-apis/directory/private-optimized-binding-TMF759/v5.0,v5
+Resource Activation Management API,TMF702,https://www.tmforum.org/oda/open-apis/directory/resource-activation-management-api-TMF702/v4.0,v4
+Resource Catalog Management API,TMF634,https://www.tmforum.org/oda/open-apis/directory/resource-catalog-management-api-TMF634/v5.0,v4; v5
+Resource Function Activation Management API,TMF664,https://www.tmforum.org/oda/open-apis/directory/resource-function-activation-management-api-TMF664/v4.0,v3; v4
+Resource Inventory Management API,TMF639,https://www.tmforum.org/oda/open-apis/directory/resource-inventory-management-api-TMF639/v4.0,v4; v5
+Resource Order Management API,TMF652,https://www.tmforum.org/oda/open-apis/directory/resource-order-management-api-TMF652/v4.0,v2; v4
+Resource Pool Management API,TMF685,https://www.tmforum.org/oda/open-apis/directory/resource-pool-management-api-TMF685,v3; v5
+Resource Reservation,TMF716,https://www.tmforum.org/oda/open-apis/directory/resource-reservation-TMF716/v4.0,v4
+Resource Role API,TMF768,https://www.tmforum.org/oda/open-apis/directory/resource-role-api--TMF768,v5
+Resource Usage API,TMF771,https://www.tmforum.org/oda/open-apis/directory/resource-usage-api-TMF771/v5.0,v5
+Software And Compute Management API,TMF730,https://www.tmforum.org/oda/open-apis/directory/software-and-compute-management-api-TMF730/v4.0,v4
+Stock Management API,TMF687,https://www.tmforum.org/oda/open-apis/directory/stock-management-api-TMF687/v4.0,v4
+Account Management API,TMF666,https://www.tmforum.org/oda/open-apis/directory/account-management-api-TMF666/v5.0,v4; v5
+Agreement Management API,TMF651,https://www.tmforum.org/oda/open-apis/directory/agreement-management-api-TMF651/v4.0,v4; v5
+Partnership Management API,TMF668,https://www.tmforum.org/oda/open-apis/directory/partnership-management-api-TMF668/v4.0,v3; v4
+Party Interaction Management API,TMF683,https://www.tmforum.org/oda/open-apis/directory/party-interaction-management-api-TMF683/v5.0,v4; v5
+Party Management API,TMF632,https://www.tmforum.org/oda/open-apis/directory/party-management-api-TMF632/v5.0,v4; v5
+Party Role Management API,TMF669,https://www.tmforum.org/oda/open-apis/directory/party-role-management-api-TMF669/v5.0,v4; v5
+Privacy Management API,TMF644,https://www.tmforum.org/oda/open-apis/directory/privacy-management-api-TMF644/v5.0,v4; v5
+Revenue Sharing Algorithm Management API,TMF736,https://www.tmforum.org/oda/open-apis/directory/revenue-sharing-algorithm-management-api-TMF736/v5.0,v5
+Revenue Sharing Model Management,TMF738,https://www.tmforum.org/oda/open-apis/directory/revenue-sharing-model-management-TMF738/v5.0,v5
+Revenue Sharing Report Management API,TMF737,https://www.tmforum.org/oda/open-apis/directory/revenue-sharing-report-management-api-TMF737/v5.0,v5
+Shipment Management Management API,TMF711,https://www.tmforum.org/oda/open-apis/directory/shipment-management-management-api-TMF711/v4.0,v4
+Shipment Tracking Management API,TMF684,https://www.tmforum.org/oda/open-apis/directory/shipment-tracking-management-api-TMF684/v1.0.0,v1
+Shipping Order Management API,TMF700,https://www.tmforum.org/oda/open-apis/directory/shipping-order-management-api-TMF700/v4.0,v4; v5
+SLA Management API,TMF623,https://www.tmforum.org/oda/open-apis/directory/sla-management-api-TMF623/v2.0.0,v2
+Work Management,TMF713,https://www.tmforum.org/oda/open-apis/directory/work-management-TMF713/v4.0,v4
+Work Order Management API,TMF697,https://www.tmforum.org/oda/open-apis/directory/work-order-management-api-TMF697/v5.0,v4; v5
+AI Management API,TMF915,https://www.tmforum.org/oda/open-apis/directory/ai-management-api-TMF915/v4.0,v4
+CDR Transaction Management API,TMF735,https://www.tmforum.org/oda/open-apis/directory/cdr-transaction-management-api-TMF735/v5.0,v5
+Change Management API,TMF655,https://www.tmforum.org/oda/open-apis/directory/change-management-api-TMF655/v4.0,v3; v4
+Closed Loop Management,TMF753,https://www.tmforum.org/oda/open-apis/directory/closed-loop-management-TMF753/v5.0,v5
+Communication Management API,TMF681,https://www.tmforum.org/oda/open-apis/directory/communication-management-api-TMF681/v4.0,v3; v4
+Cost Management API,TMF764,https://www.tmforum.org/oda/open-apis/directory/cost-management-api-TMF764,v5
+Digital Identity Management API,TMF720,https://www.tmforum.org/oda/open-apis/directory/digital-identity-management-api-TMF720/v4.0,v4; v5
+Document Management API,TMF667,https://www.tmforum.org/oda/open-apis/directory/document-management-api-TMF667/v4.0,v4; v5
+Dunning Case Management,TMF728,https://www.tmforum.org/oda/open-apis/directory/dunning-case-management-TMF728/v4.0,v4
+Entity Catalog Management API,TMF662,https://www.tmforum.org/oda/open-apis/directory/entity-catalog-management-api-TMF662/v4.0,v3; v4
+Entity Inventory Management API,TMF703,https://www.tmforum.org/oda/open-apis/directory/entity-inventory-management-api-TMF703/v4.0,v4
+Event Management API,TMF688,https://www.tmforum.org/oda/open-apis/directory/event-management-api-TMF688/v4.0,v4
+Federated ID Management API,TMF691,https://www.tmforum.org/oda/open-apis/directory/federated-id-management-api-TMF691/v4.0,v4; v5
+General Test Artifact Management API,TMF710,https://www.tmforum.org/oda/open-apis/directory/general-test-artifact-management-api-TMF710/v4.0,v4
+Geographic Address Management API,TMF673,https://www.tmforum.org/oda/open-apis/directory/geographic-address-management-api-TMF673/v4.0,v4; v5
+Geographic Location Management API,TMF675,https://www.tmforum.org/oda/open-apis/directory/geographic-location-management-api-TMF675/v1.0.0,v1; v4
+Geographic Site Management API,TMF674,https://www.tmforum.org/oda/open-apis/directory/geographic-site-management-api-TMF674/v4.0,v4; v5
+Incident Management API,TMF724,https://www.tmforum.org/oda/open-apis/directory/incident-management-api-TMF724/v4.0,v4
+Intent Management API,TMF921,https://www.tmforum.org/oda/open-apis/directory/intent-management-api-TMF921/v5.0,v4; v5
+Metadata Catalog Management API,TMF725,https://www.tmforum.org/oda/open-apis/directory/metadata-catalog-management-api-TMF725/v4.0,v4
+Open Gateway Onboarding and Ordering Component Suite,TMF931,https://www.tmforum.org/oda/open-apis/directory/open-gateway-onboarding-and-ordering-component-suite-TMF931/v5.2,v5
+Performance Management API,TMF628,https://www.tmforum.org/oda/open-apis/directory/performance-management-api-TMF628/v5.0,v5
+Performance Thresholding Management API,TMF649,https://www.tmforum.org/oda/open-apis/directory/performance-thresholding-management-api-TMF649/v3.0.0,v3; v4
+Policy Management API,TMF723,https://www.tmforum.org/oda/open-apis/directory/policy-management-api-TMF723/v5.0,v5
+Process Flow Management API,TMF701,https://www.tmforum.org/oda/open-apis/directory/process-flow-management-api-TMF701/v4.1,v4; v5
+Self Care Management API,TMF910,https://www.tmforum.org/oda/open-apis/directory/self-care-management-api-TMF910/v1.0.0,v1
+Test Case Management API,TMF704,https://www.tmforum.org/oda/open-apis/directory/test-case-management-api-TMF704/v4.0,v4
+Test Data Management API,TMF706,https://www.tmforum.org/oda/open-apis/directory/test-data-management-api-TMF706/v4.0,v4
+Test Environment Management API,TMF705,https://www.tmforum.org/oda/open-apis/directory/test-environment-management-api-TMF705/v4.0,v4
+Test Execution Management API,TMF708,https://www.tmforum.org/oda/open-apis/directory/test-execution-management-api-TMF708/v4.0,v4
+Test Result Management API,TMF707,https://www.tmforum.org/oda/open-apis/directory/test-result-management-api-TMF707/v4.0,v4
+Test Scenario Management API,TMF709,https://www.tmforum.org/oda/open-apis/directory/test-scenario-management-api-TMF709/v4.0,v4
+Topology Management API,TMF686,https://www.tmforum.org/oda/open-apis/directory/topology-management-api-TMF686/v4.0,v4
+Trouble Ticket Management API,TMF621,https://www.tmforum.org/oda/open-apis/directory/trouble-ticket-management-api-TMF621/v5.0,v4; v5
+User Role Permission Management API,TMF672,https://www.tmforum.org/oda/open-apis/directory/user-role-permission-management-api-TMF672/v4.0,v4; v5
+Warranty Management,TMF715,https://www.tmforum.org/oda/open-apis/directory/warranty-management-TMF715/v4.0,v4
+Work Qualification Management,TMF714,https://www.tmforum.org/oda/open-apis/directory/work-qualification-management-TMF714/v4.0,v4

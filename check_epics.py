@@ -9,6 +9,8 @@ from exceptions import (
     JiraValidationError,
     JiraConfigurationError
 )
+from rule_engine import RuleEngine, RuleReporter
+from rule_config import DEFAULT_CONFIG
 
 
 async def main():
@@ -19,6 +21,18 @@ async def main():
     try:
         # Create the API client
         client = JiraApiClient()
+        
+        # Initialize rule engine
+        print("🔍 Debug: Creating rule engine...")
+        rule_engine = RuleEngine(config=DEFAULT_CONFIG)
+        print("� Debug: Getting rule summary...")
+        summary = rule_engine.get_rule_summary()
+        print(f"🔍 Debug: Summary keys: {list(summary.keys())}")
+        
+        print(f"\n📋 Rule Engine initialized:")
+        print(f"   {summary['enabled_rules']}/{summary['total_rules']} rules enabled")
+        for category, rules in summary['rules_by_category'].items():
+            print(f"   - {category}: {len(rules)} rules")
         
         # Authenticate
         print("\n🔐 Step 1: Authenticating with JIRA...")
@@ -85,93 +99,30 @@ async def main():
                     'updated': fields.get('updated'),
                     'url': f"{client.base_url}/browse/{issue.get('key')}",
                     'issues': fields.get('issuelinks', []),
-                    'fixVersions': fields.get('fixVersions', [])
+                    'fixVersions': fields.get('fixVersions', []),
+                    'raw_fields': fields  # Keep raw fields for rules that need them
                 }
                 
                 print("=" * 80)
                 print(f"\n{i:2}. Issue: {processed_issue['key']}")
                 print(f"    Title: {processed_issue['summary']}")
-                #print(f"    Status: {processed_issue['status']}")
                 print(f"    Assignee: {processed_issue['assignee']}")
-                #print(f"    Priority: {processed_issue['priority']}")
-                #print(f"    Type: {processed_issue['issue_type']}")
-                #print(f"    Created: {processed_issue['created'][:10] if processed_issue['created'] else 'Unknown'}")
                 print(f"    URL: {processed_issue['url']}")
-                #print(f"Raw JIRA data:\n{json.dumps(issue, indent=2)}")
-
-                # EPIC data quality checks
-                issue_id = f"{processed_issue['key']}"
-                #print(f"    Processing EPIC [{issue_id}: \"{processed_issue['summary']}\"]\n    [{processed_issue['url']}] for data quality issues...")
-
-                # - No assignee
-                if not processed_issue['assignee'] or processed_issue['assignee'] == 'Unassigned':
-                    print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] is not assigned to anyone")
-                else:
-                    # Assigned to someone who is "inactive"
-                    if fields.get('assignee', {}).get('active') == False:
-                        print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] is assigned to an inactive user")
-                    else:
-                        print(f"    👤 Assigned to: {processed_issue['assignee']}")
-
-                # No issues linked
-                if not processed_issue['issues']:
-                    print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] has no linked JIRAs")
-                else:
-                    print(f"    🔗 Linked issues: {len(processed_issue['issues'])} connected JIRAs found")
-                    # {json.dumps(processed_issue['issues'], indent=2)}
-                # No Components
-                if not fields.get('components'):
-                    print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] has no components set")
-                    # Try to find text in the title like "TMFxxx"
-                    if 'TMF' in processed_issue['summary']:
-                        # Extract the XXX number
-                        tmf_number = processed_issue['summary'].split('TMF')[-1].strip().split(' ')[0].strip('E')
-                        # Is there a component matching this?
-                        matching_components = [name for name in component_names if name and tmf_number in name]
-                        if matching_components:
-                            print(f"      ✅ Propose adding component(s): {', '.join(str(comp) for comp in matching_components if comp)}")
-                        else:
-                            print(f"      ❌ No matching components found for TMF number {tmf_number}")
-                    else:
-                        print(f"      🔍 No 'TMF' number found in title: [{processed_issue['summary']}]")
-                else:
-                    component_names_in_issue = [comp.get('name') for comp in fields.get('components', []) if comp.get('name')]
-                    print(f"    🏷️  Has {len(component_names_in_issue)} Components: {', '.join(component_names_in_issue)}")
-                # No description
-                if not processed_issue['description']:
-                    print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] has no description")
-                # No "Issues in epic"
-                if fields.get('issuelinks') and len(fields.get('issuelinks')) == 0:
-                    print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] has no 'Issues in Epic' links")
-                    print(json.dumps(issue, indent=2))
-                # FixVersion is less than 5.0
-                if fields.get('fixVersions'):
-                    for version in fields.get('fixVersions'):
-                        version_name = version.get('name', '').strip('vVxX')
-                        # Take the first number as the major version
-                        version_number = version_name.split('.')[0] if '.' in version_name else version_name
-                        try:
-                            version_number = float(version_number)
-                            if version_number < 5.0:
-                                print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] has FixVersion {version_name} which is less than 5.0")
-                            else:
-                                print(f"    ✅ FixVersion {version_name} looks good")
-                        except ValueError:
-                            print(f"    Tried to parse FixVersion {version_name} as a float - but failed")
-                            # Not a number, ignore
-                            pass
-                else:
-                    print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] has no FixVersion set")
-                # In Progress for over a year
-                if processed_issue['created']:
-                    created_date = datetime.strptime(processed_issue['created'][:10], '%Y-%m-%d')
-                    if created_date < datetime.now() - timedelta(days=365):
-                        print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] is \"In Progress\" but is over a year old (created {processed_issue['created'][:10]}))")
-                # Not updated in over 6 months
-                if processed_issue['updated']:
-                    updated_date = datetime.strptime(processed_issue['updated'][:10], '%Y-%m-%d')
-                    if updated_date < datetime.now() - timedelta(days=180):
-                        print(f"    ⚠️  Data Quality Issue: EPIC [{issue_id}] has not been updated in over 6 months (since {processed_issue['updated'][:10]})")
+                
+                # Run all rules against this issue
+                context = {
+                    'components': component_names,
+                    'thresholds': DEFAULT_CONFIG.get('thresholds', {})
+                }
+                rule_results = rule_engine.run_rules(processed_issue, context)
+                
+                # Display results
+                output_config = DEFAULT_CONFIG.get('output', {})
+                RuleReporter.display_results(
+                    rule_results,
+                    show_passed=output_config.get('show_passed', False),
+                    group_by_severity=output_config.get('group_by_severity', True)
+                )
 
         
         print("\n" + "=" * 100)
