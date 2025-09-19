@@ -7,6 +7,7 @@ and other issue types in addition to EPICs.
 """
 
 import asyncio
+import re
 from jira_api import JiraApiClient
 import json
 import pandas as pd
@@ -24,6 +25,9 @@ from rule_config import DEFAULT_CONFIG
 
 # Global variable to cache the TMF APIs dataframe
 _tmf_apis_df = None
+
+# Global variable to cache the TMF rules dataframe
+_tmf_rules_df = None
 
 # Global variable to track labels and their usage
 _label_tracker = {}
@@ -71,6 +75,31 @@ def load_tmf_apis():
             _tmf_apis_df = pd.DataFrame()  # Empty dataframe
     
     return _tmf_apis_df
+
+
+def load_tmf_rules():
+    """
+    Load the TMF rules CSV file (from Git) into a pandas DataFrame.
+    
+    Returns:
+        pd.DataFrame: DataFrame containing TMF rules file information from Git
+    """
+    global _tmf_rules_df
+    
+    if _tmf_rules_df is None:
+        try:
+            _tmf_rules_df = pd.read_csv('tmf_rules_playwright.csv')
+            # Convert date strings to datetime objects for easier comparison
+            _tmf_rules_df['last_commit_date'] = pd.to_datetime(_tmf_rules_df['last_commit_date'])
+            print(f"[DEBUG] Loaded {len(_tmf_rules_df)} TMF rules files from Git data")
+        except FileNotFoundError:
+            print("[WARNING] tmf_rules_playwright.csv not found. TMF Git rules lookup will not be available.")
+            _tmf_rules_df = pd.DataFrame()  # Empty dataframe
+        except Exception as e:
+            print(f"[WARNING] Error loading tmf_rules_playwright.csv: {e}")
+            _tmf_rules_df = pd.DataFrame()  # Empty dataframe
+    
+    return _tmf_rules_df
 
 
 def get_tmf_api_info(tmf_code):
@@ -135,6 +164,86 @@ def get_tmf_api_info(tmf_code):
         'url': api_info['URL'],
         'all_versions': versions_str
     }
+
+
+def get_tmf_rules_info(tmf_code):
+    """
+    Get Git rules information for a given TMF API code.
+    
+    Args:
+        tmf_code (str): TMF API code (e.g., "TMF646", "646", or just "646")
+    
+    Returns:
+        dict: Dictionary with Git information or None if not found
+    """
+    df = load_tmf_rules()
+    
+    if df.empty:
+        return None
+    
+    # Normalize the TMF code input
+    if isinstance(tmf_code, str):
+        # Remove any non-numeric characters and ensure it's a 3-digit number
+        numeric_part = ''.join(filter(str.isdigit, tmf_code))
+        if len(numeric_part) > 0:
+            normalized_code = f"TMF{numeric_part.zfill(3)}"
+        else:
+            return None
+    elif isinstance(tmf_code, int):
+        normalized_code = f"TMF{tmf_code:03d}"
+    else:
+        return None
+    
+    # Find the rules file in the dataframe - check if directory starts with the TMF code
+    matching_rows = df[df['directory'].str.startswith(normalized_code)]
+    
+    if matching_rows.empty:
+        return None
+    
+    # Get the first match (there should typically be only one)
+    rules_info = matching_rows.iloc[0]
+    
+    return {
+        'tmf_code': normalized_code,
+        'directory': rules_info['directory'],
+        'filename': rules_info['filename'],
+        'file_path': rules_info['file_path'],
+        'last_commit_date': rules_info['last_commit_date'],
+        'last_commit_message': rules_info['last_commit_message'],
+        'last_author': rules_info['last_author'],
+        'commit_sha': rules_info['commit_sha'],
+        'extraction_method': rules_info['extraction_method']
+    }
+
+
+def find_tmf_references_in_components(components):
+    """
+    Find TMF API references in JIRA components.
+    
+    Args:
+        components (list): List of component dictionaries from JIRA
+    
+    Returns:
+        list: List of TMF API codes found in the components
+    """
+    if not components:
+        return []
+    
+    tmf_refs = []
+    
+    for component in components:
+        if isinstance(component, dict):
+            component_name = component.get('name', '')
+        else:
+            component_name = str(component)
+        
+        # Pattern to match TMF followed by 3 digits
+        tmf_pattern = r'TMF\s*(\d{3})'
+        matches = re.findall(tmf_pattern, component_name, re.IGNORECASE)
+        tmf_refs.extend([f"TMF{match}" for match in matches])
+    
+    # Return unique TMF codes
+    return list(set(tmf_refs))
 
 
 def find_tmf_references_in_text(text):

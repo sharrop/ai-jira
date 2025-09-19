@@ -90,6 +90,20 @@ DEFAULT_CONFIG = {
         'ToolingTransferRule': {
             'enabled': True,
             'description': 'Check if issue has Tooling label or component and suggest transfer to Git'
+        },
+        
+        # TMF API Rules
+        'TmfApiVersionRule': {
+            'enabled': True,
+            'description': 'Check TMF API version information in issues'
+        },
+        'TmfApiReferenceRule': {
+            'enabled': True,
+            'description': 'Provide information about TMF APIs referenced in issues'
+        },
+        'TmfGitCommitInfoRule': {
+            'enabled': True,
+            'description': 'Provide Git commit information for TMF APIs referenced in issues'
         }
     },
     

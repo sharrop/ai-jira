@@ -3,6 +3,8 @@ TMF API related validation rules for JIRA issues
 """
 
 import re
+import pandas as pd
+from datetime import datetime
 from .base_rule import BaseRule, RuleCategory, RuleSeverity, RuleResult
 from typing import Dict, Any, Optional, List
 
@@ -244,6 +246,138 @@ class TmfApiReferenceRule(BaseRule):
                 rule_id=self.rule_id,
                 severity=RuleSeverity.ERROR,
                 message=f"Error retrieving TMF API info: {str(e)}",
+                issue_key=issue.get('key', 'Unknown'),
+                passed=False
+            ))
+            return results
+
+
+class TmfGitCommitInfoRule(BaseRule):
+    """Provide Git commit information for TMF APIs referenced in issues"""
+    
+    def get_category(self) -> RuleCategory:
+        return RuleCategory.METADATA
+    
+    def get_severity(self) -> RuleSeverity:
+        return RuleSeverity.INFO
+    
+    def get_description(self) -> str:
+        return "Provides Git commit information for TMF APIs referenced in issues"
+    
+    def check(self, issue: Dict[str, Any], context: Dict[str, Any]) -> List[RuleResult]:
+        """
+        Provide Git commit information for TMF APIs referenced in the issue
+        
+        Args:
+            issue: Issue data dictionary
+            context: Validation context
+            
+        Returns:
+            List of RuleResult objects with TMF Git commit information
+        """
+        results = []
+        
+        try:
+            # Import here to avoid circular imports
+            from check_issues import find_tmf_references_in_text, find_tmf_references_in_components, get_tmf_rules_info
+            
+            # Search for TMF references in title, description, and components
+            title = issue.get('summary', '') or ''
+            description = issue.get('description', '') or ''
+            components = issue.get('components', [])
+            
+            # Find TMF references in title and description
+            tmf_refs_text = find_tmf_references_in_text(f"{title} {description}")
+            
+            # Find TMF references in components
+            tmf_refs_components = find_tmf_references_in_components(components)
+            
+            # Combine all TMF references
+            all_tmf_refs = list(set(tmf_refs_text + tmf_refs_components))
+            
+            if not all_tmf_refs:
+                return results  # No TMF references found
+            
+            # Get issue creation date for comparison
+            issue_created = issue.get('created')
+            issue_created_dt = None
+            if issue_created:
+                try:
+                    # Parse JIRA datetime format
+                    issue_created_dt = pd.to_datetime(issue_created)
+                except:
+                    pass
+            
+            for tmf_code in all_tmf_refs:
+                rules_info = get_tmf_rules_info(tmf_code)
+                
+                if rules_info:
+                    # Format the Git information message
+                    file_path = rules_info['file_path']
+                    commit_date = rules_info['last_commit_date']
+                    commit_author = rules_info['last_author']
+                    commit_message = rules_info['last_commit_message']
+                    commit_sha = rules_info['commit_sha']
+                    
+                    # Format the commit date for display
+                    if isinstance(commit_date, str):
+                        commit_date_dt = pd.to_datetime(commit_date)
+                    else:
+                        commit_date_dt = commit_date
+                    
+                    commit_date_str = commit_date_dt.strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    message = (
+                        f"The rules file {file_path} in Git associated with {tmf_code} "
+                        f"was last committed to the main branch on {commit_date_str} "
+                        f"by {commit_author} with a comment of '{commit_message}'"
+                    )
+                    
+                    results.append(RuleResult(
+                        rule_id=self.rule_id,
+                        severity=self.severity,
+                        message=message,
+                        issue_key=issue.get('key', 'Unknown'),
+                        passed=True,  # This is informational, always "passed"
+                        suggestion=f"Commit SHA: {commit_sha}"
+                    ))
+                    
+                    # Check if commit date is after issue creation date
+                    if issue_created_dt and commit_date_dt > issue_created_dt:
+                        time_diff = commit_date_dt - issue_created_dt
+                        days_diff = time_diff.days
+                        
+                        warning_message = (
+                            f"WARNING: The rules file for {tmf_code} was updated {days_diff} days "
+                            f"AFTER this JIRA was created. The issue may have since been addressed "
+                            f"in the latest commit ({commit_date_str})."
+                        )
+                        
+                        results.append(RuleResult(
+                            rule_id=self.rule_id,
+                            severity=RuleSeverity.WARNING,
+                            message=warning_message,
+                            issue_key=issue.get('key', 'Unknown'),
+                            passed=False,
+                            suggestion="Consider reviewing if this issue is still relevant given the recent Git updates"
+                        ))
+                else:
+                    results.append(RuleResult(
+                        rule_id=self.rule_id,
+                        severity=RuleSeverity.WARNING,
+                        message=f"No Git rules file found for {tmf_code} in the TMF repository data",
+                        issue_key=issue.get('key', 'Unknown'),
+                        passed=False
+                    ))
+            
+            return results
+            
+        except Exception as e:
+            # Don't fail the rule engine if TMF lookup fails
+            results.append(RuleResult(
+                rule_id=self.rule_id,
+                severity=RuleSeverity.ERROR,
+                message=f"Error retrieving TMF Git info: {str(e)}",
                 issue_key=issue.get('key', 'Unknown'),
                 passed=False
             ))
