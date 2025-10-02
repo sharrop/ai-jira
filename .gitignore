@@ -245,3 +245,5 @@ config.json
 htmlcov/
 coverage/
 .coverage
+
+*.pdf

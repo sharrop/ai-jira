@@ -21,6 +21,7 @@ from exceptions import (
 )
 from rule_engine import RuleEngine, RuleReporter
 from rule_config import DEFAULT_CONFIG
+from markdown_reporter import MarkdownReporter
 
 
 # Global variable to cache the TMF APIs dataframe
@@ -31,6 +32,29 @@ _tmf_rules_df = None
 
 # Global variable to track labels and their usage
 _label_tracker = {}
+
+# Global variable to control output format
+_markdown_mode = False
+_markdown_reporter = None
+_collected_output = []
+
+
+def output_print(text, markdown_section=None):
+    """
+    Print function that handles both console and markdown output
+    
+    Args:
+        text: Text to print/collect
+        markdown_section: Optional section type for markdown formatting
+    """
+    global _collected_output
+    
+    if _markdown_mode:
+        # In markdown mode, we collect the output for later formatting
+        _collected_output.append({'text': text, 'section': markdown_section})
+    else:
+        # Regular console output
+        print(text)
 
 
 def safe_encode_for_cp1252(text):
@@ -444,9 +468,19 @@ async def main():
         
         # Get project components for context
         print("\n[SETUP] Step 2: Loading project components...")
-        components = await client.get_project_components("AP")
-        component_names = [comp.get('name') for comp in components if comp.get('name')]
-        print(f"   Found {len(component_names)} Components in AP project")
+        
+        # Use the AP project as intended
+        project_key = "AP"
+        print(f"\n[SETUP] Loading components for project '{project_key}'...")
+        
+        try:
+            components = await client.get_project_components(project_key)
+            component_names = [comp.get('name') for comp in components if comp.get('name')]
+            print(f"   Found {len(component_names)} Components in {project_key} project")
+        except Exception as e:
+            print(f"   [WARNING] Could not load components for {project_key}: {e}")
+            components = []
+            component_names = []
         
         # Define issue types to check
         issue_types_to_check = [
@@ -479,7 +513,7 @@ async def main():
             
             # Build JQL query for this issue type
             # Focus on active issues (not closed/resolved) for data quality
-            base_jql = f'project = AP AND {jql_filter} AND status not in ("Closed", "Resolved", "Done")'
+            base_jql = f'project = {project_key} AND {jql_filter} AND status not in ("Closed", "Resolved", "Done")'
             
             # Add time filter to focus on recent/active issues
             time_filter = ' AND (updated >= "-6M" OR status = "In Progress")'  # Last 6 months or in progress

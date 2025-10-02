@@ -254,28 +254,62 @@ class CommentCountInfoRule(BaseRule):
     def check(self, issue: Dict[str, Any], context: Dict[str, Any]) -> List[RuleResult]:
         comment_count = issue.get('comment_count', 0)
         issue_key = str(issue.get('key', 'UNKNOWN'))
+        issue_type = context.get('issue_type', 'issue')
+        comments = issue.get('comments', [])
         
         if comment_count == 0:
-            return [RuleResult(
-                rule_id=self.rule_id,
-                severity=RuleSeverity.INFO,
-                message=f"No comments",
-                issue_key=issue_key,
-                passed=True
-            )]
-        elif comment_count == 1:
-            return [RuleResult(
-                rule_id=self.rule_id,
-                severity=RuleSeverity.INFO,
-                message=f"Has 1 comment",
-                issue_key=issue_key,
-                passed=True
-            )]
+            # For Tasks, Bugs, and Sub-tasks, no comments may indicate lack of review/engagement
+            if issue_type.upper() not in ['EPIC', 'STORY']:
+                return [RuleResult(
+                    rule_id=self.rule_id,
+                    severity=RuleSeverity.WARNING,
+                    message=f"{issue_type.upper()} [{issue_key}] has no comments",
+                    issue_key=issue_key,
+                    passed=False,
+                    suggestion=f"Add comments to document review, progress, or decisions for this {issue_type.lower()}"
+                )]
+            else:
+                return [RuleResult(
+                    rule_id=self.rule_id,
+                    severity=RuleSeverity.INFO,
+                    message=f"No comments",
+                    issue_key=issue_key,
+                    passed=True
+                )]
         else:
+            # Check if any comment mentions "Governance Call"
+            has_governance_review = False
+            for comment in comments:
+                comment_body = comment.get('body', '')
+                if 'Governance Call' in comment_body:
+                    has_governance_review = True
+                    break
+            
+            # Check if issue has "reviewed" label
+            labels = issue.get('labels', [])
+            has_reviewed_label = 'reviewed' in labels
+            
+            # Build message based on comment count
+            if comment_count == 1:
+                message = f"Has 1 comment"
+            else:
+                message = f"Has {comment_count} comments"
+            
+            # If governance call mentioned but no reviewed label, suggest adding it
+            if has_governance_review and not has_reviewed_label:
+                return [RuleResult(
+                    rule_id=self.rule_id,
+                    severity=RuleSeverity.INFO,
+                    message=message,
+                    issue_key=issue_key,
+                    passed=True,
+                    suggestion=f"Issue has been reviewed in Governance Call - consider adding 'reviewed' label"
+                )]
+            
             return [RuleResult(
                 rule_id=self.rule_id,
                 severity=RuleSeverity.INFO,
-                message=f"Has {comment_count} comments",
+                message=message,
                 issue_key=issue_key,
                 passed=True
             )]

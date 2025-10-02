@@ -218,6 +218,10 @@ class NoLinkedIssuesRule(BaseRule):
         issue_key = str(issue.get('key', 'UNKNOWN'))
         issue_type = context.get('issue_type', 'issue')
         
+        # Only check Epics for linked issues (Epics should coordinate multiple work items)
+        if issue_type.upper() != 'EPIC':
+            return []
+        
         if not issues:
             return [RuleResult(
                 rule_id=self.rule_id,
